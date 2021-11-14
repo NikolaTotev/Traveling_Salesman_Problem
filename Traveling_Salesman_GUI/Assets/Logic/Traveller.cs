@@ -17,12 +17,15 @@ public enum CrossoverType
 public class Traveller : MonoBehaviour
 {
     private List<Vector3Int> pointsToVisit = new List<Vector3Int>();
-    private int numberOfPoints = 100;
-    public int numberOfParents = 4;
+
+    public int numberOfPoints = 100;
+    public int numberOfParents = 100;
+
     public CrossoverType currentCrossoverType = CrossoverType.twoPoint;
     public GameObject TownGameObject;
     private bool pointsDrawn;
     private List<Specimen> CurrentGeneration = new List<Specimen>();
+    private List<Specimen> NewGeneration = new List<Specimen>();
     private Specimen currentBest;
     Tuple<int, int> firstPair = new Tuple<int, int>(0, 0);
     Tuple<int, int> secondPair = new Tuple<int, int>(0, 0);
@@ -51,50 +54,54 @@ public class Traveller : MonoBehaviour
     {
         for (int i = 0; i < 4; i++)
         {
-            Specimen newSpecimen = new Specimen(numberOfPoints);
+            Specimen newSpecimen = new Specimen(numberOfPoints, pointsToVisit);
             newSpecimen.InitializationRandomSwap();
         }
     }
 
-    void Crossover(CrossoverType crossover, Specimen parent1, Specimen parent2)
+    Specimen Crossover(CrossoverType crossover, Specimen parent1, Specimen parent2)
     {
+        Specimen crossoverResult;
         switch (crossover)
         {
             case CrossoverType.onePoint:
-                OnePointCrossover(parent1,parent1);
+                crossoverResult = OnePointCrossover(parent1, parent1);
                 break;
             case CrossoverType.twoPoint:
-                TwoPointCrossover(parent1,parent2);
+                crossoverResult = TwoPointCrossover(parent1, parent2);
                 break;
             case CrossoverType.partialMap:
-                PartialMapCrossover(parent1, parent2);
+                crossoverResult = PartialMapCrossover(parent1, parent2);
                 break;
             case CrossoverType.cyclic:
-                CyclicCrossover(parent1, parent2);
+                crossoverResult = CyclicCrossover(parent1, parent2);
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(crossover), crossover, null);
+                crossoverResult = null;
+                break;
         }
+
+        return crossoverResult;
     }
 
-    private void OnePointCrossover(Specimen parent1, Specimen parent2)
+    private Specimen OnePointCrossover(Specimen parent1, Specimen parent2)
     {
-
+        return null;
     }
 
-    private void TwoPointCrossover(Specimen parent1, Specimen parent2)
+    private Specimen TwoPointCrossover(Specimen parent1, Specimen parent2)
     {
-
+        return null;
     }
 
-    private void PartialMapCrossover(Specimen parent1, Specimen parent2)
+    private Specimen PartialMapCrossover(Specimen parent1, Specimen parent2)
     {
-
+        return null;
     }
 
-    private void CyclicCrossover(Specimen parent1, Specimen parent2)
+    private Specimen CyclicCrossover(Specimen parent1, Specimen parent2)
     {
-
+        return null;
     }
 
     void EvaluateGeneration()
@@ -107,12 +114,6 @@ public class Traveller : MonoBehaviour
         CurrentGeneration = (from specimen in CurrentGeneration orderby specimen.fitnessLevel select specimen).ToList();
     }
 
-    void Reproduce()
-    {
-        Crossover(currentCrossoverType, CurrentGeneration[firstPair.Item1], CurrentGeneration[firstPair.Item2]);
-        Crossover(currentCrossoverType, CurrentGeneration[secondPair.Item1], CurrentGeneration[secondPair.Item2]);
-    }
-
     void Mutation()
     {
     }
@@ -120,8 +121,69 @@ public class Traveller : MonoBehaviour
     //Pairing is done on a "top 3 basis"
     void PairParents()
     {
-        firstPair = new Tuple<int, int>(CurrentGeneration.Count - 2, CurrentGeneration.Count - 1);
-        secondPair = new Tuple<int, int>(CurrentGeneration.Count - 1, CurrentGeneration.Count - 3);
+        //Transfer top 3 over to new generation, remaining numberOfParents-3 is considered the "new generation"
+        for (int i = 0; i < 3; i++)
+        {
+            NewGeneration.Add(CurrentGeneration[i]);
+        }
+
+        ValueTuple<int, int, int> requiredChildrenCounts;
+
+        int remainingFreeSpace = numberOfParents - 3;
+
+        //ToDo this needs to be verified that it sums up to the correct final value after the new generation is created.
+        requiredChildrenCounts.Item1 = remainingFreeSpace * (50 / 100);
+        requiredChildrenCounts.Item2 = remainingFreeSpace * (20 / 100);
+        requiredChildrenCounts.Item3 = remainingFreeSpace * (30 / 100);
+
+        //Top 0-20% with 30-40% -> 50% of the new generation
+        ValueTuple<int, int> firstParentSelectionRange = PercentToIndex(0, 20);
+        ValueTuple<int, int> secondParentSelectionRange = PercentToIndex(30, 40);
+
+        Reproduce(requiredChildrenCounts.Item1, firstParentSelectionRange, secondParentSelectionRange);
+
+        //Top 0-20% with bottom 0-20% (80-90%); -> 20% of the new generation
+        firstParentSelectionRange = PercentToIndex(0, 20);
+        secondParentSelectionRange = PercentToIndex(80, 100);
+
+        Reproduce(requiredChildrenCounts.Item2, firstParentSelectionRange, secondParentSelectionRange);
+
+        //Randomly mix all specimens in the range 30-60%  -> 30% of the new generation
+        firstParentSelectionRange = PercentToIndex(30, 50);
+        secondParentSelectionRange = PercentToIndex(40, 60);
+
+        Reproduce(requiredChildrenCounts.Item3, firstParentSelectionRange, secondParentSelectionRange);
+    }
+
+    private void Reproduce(int numberOfChildren, ValueTuple<int, int> firstParentSelectionRange, ValueTuple<int, int> secondParentSelectionRange)
+    {
+        Random randSelector = new Random();
+
+        for (int i = 0; i < numberOfChildren; i++)
+        {
+            Specimen firstParent =
+                CurrentGeneration[
+                    randSelector.Next(firstParentSelectionRange.Item1, firstParentSelectionRange.Item2)];
+
+            Specimen secondParent =
+                CurrentGeneration[
+                    randSelector.Next(secondParentSelectionRange.Item1, secondParentSelectionRange.Item2)];
+
+            Specimen child = Crossover(CrossoverType.twoPoint, firstParent, secondParent);
+            NewGeneration.Add(child);
+        }
+    }
+
+    //Returns the end of the percent interval
+    ValueTuple<int, int> PercentToIndex(int startPercent, int endPercent)
+    {
+        ValueTuple<int, int> indexRange;
+
+        indexRange.Item1 = numberOfParents * (startPercent - 10 / 100);
+        //NOTE in the case of 100 parents 10% returns 10, if you want the correct index subtract 1;
+        indexRange.Item2 = numberOfParents * (endPercent / 100);
+
+        return indexRange;
     }
 
     void GeneratePoints()
