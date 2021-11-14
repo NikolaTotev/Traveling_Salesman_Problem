@@ -17,11 +17,11 @@ namespace CrossoverTesting
         static void Main(string[] args)
         {
             List<Specimen> CurrentGeneration = new List<Specimen>();
-            List<Point> pointsToVisit = new List<Point>();
+            List<int> firstPointList = new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+            List<int> secondPointList = new List<int>() { 1, 9, 5, 2, 3, 6, 4, 8, 10, 7 };
 
             int numberOfPoints = 100;
             int numberOfParents = 100;
-
         }
 
         Specimen Crossover(CrossoverType crossover, Specimen parent1, Specimen parent2)
@@ -56,7 +56,24 @@ namespace CrossoverTesting
 
         private Specimen TwoPointCrossover(Specimen parent1, Specimen parent2)
         {
-            return null;
+            Specimen newSpecimen;
+            List<int> firstCrossedList = parent1.Path;
+            List<int> secondCrossedList = parent2.Path;
+            Random rand = new Random();
+            int midpoint = parent1.Path.Count / 2;
+
+
+            int firstCrossoverIndex = rand.Next(midpoint - midpoint / 2, midpoint);
+            int secondCrossoverIndex = rand.Next(midpoint+1, midpoint + midpoint / 2);
+
+            for (int i = 0; i < firstCrossedList.Count; i++)
+            {
+                if (i < firstCrossoverIndex || i > secondCrossoverIndex)
+                {
+                    firstCrossedList[i] = parent2.Path[i];
+                    secondCrossedList[i] = parent1.Path[i];
+                }
+            }
         }
 
         private Specimen PartialMapCrossover(Specimen parent1, Specimen parent2)
@@ -79,18 +96,13 @@ namespace CrossoverTesting
 
     public class Specimen
     {
-        private List<int> path;
+        public List<int> Path;
         public int fitnessLevel = 0;
         //private List<Vector3Int> m_Points;
 
-        public Specimen(int numberOfPoints)
+        public Specimen(List<int> path)
         {
-            path = new List<int>();
-            for (int i = 0; i < numberOfPoints; i++)
-            {
-                path.Add(i + 1);
-            }
-
+            Path = path;
             //  m_Points = points;
         }
         // Start is called before the first frame update
