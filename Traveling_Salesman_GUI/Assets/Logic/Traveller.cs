@@ -2,7 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Random = System.Random;
@@ -16,10 +21,11 @@ public enum CrossoverType
 }
 public class Traveller : MonoBehaviour
 {
-    private List<Vector3Int> pointsToVisit = new List<Vector3Int>();
+    public Visualizer PathVisualizer;
+    private List<Point> pointsToVisit = new List<Point>();
 
-    public int numberOfPoints = 100;
-    public int numberOfParents = 100;
+    public int numberOfPoints = 20;
+    public int numberOfParents = 20;
 
     public CrossoverType currentCrossoverType = CrossoverType.twoPoint;
     public GameObject TownGameObject;
@@ -30,34 +36,61 @@ public class Traveller : MonoBehaviour
     Tuple<int, int> firstPair = new Tuple<int, int>(0, 0);
     Tuple<int, int> secondPair = new Tuple<int, int>(0, 0);
 
+    private int generationsSinceLastMin = 0;
+
+    private int numberOfGenerations = 0;
     // Start is called before the first frame update
     void Start()
     {
         GeneratePoints();
         CreateFirstGeneration();
+        currentBest = new Specimen(0, pointsToVisit, null);
+        currentBest.FitnessLevelSet = false;
         EvaluateGeneration();
+        VisualizeRoute();
     }
 
-    // Update is called once per frame
     void Update()
     {
-        PairParents();
-        Mutation();
-        EvaluateGeneration();
-        VisualizeRoute(currentBest);
+        EvolveAsync();
+        VisualizeRoute();
     }
 
-
-    void Evolve()
+    private bool isWorking = false;
+     
+    public async void EvolveAsync()
     {
-        int timesSinceLastNewMin = 0;
-        while (timesSinceLastNewMin < 20)
+
+        if (generationsSinceLastMin < 20 && numberOfGenerations < 5000)
         {
-            PairParents();
-            Mutation();
-            EvaluateGeneration();
-            VisualizeRoute(currentBest);
-            timesSinceLastNewMin++;
+            if (!isWorking)
+            {
+                isWorking = true;
+                var resultTask = await Task.Run(() => {
+                    PairParents();
+                    Mutation();
+                    EvaluateGeneration();
+                    generationsSinceLastMin++;
+                    numberOfGenerations++;
+
+                    Debug.Log($"Current Generation: {numberOfGenerations}");
+                    Debug.Log($"Generations since last new min: {generationsSinceLastMin}");
+                    Debug.Log($"Best fitness level: {currentBest.FitnessLevel}");
+
+                    StringBuilder builder = new StringBuilder();
+                    for (int i = 0; i < currentBest.Path.Count; i++)
+                    {
+                        builder.Append($"{currentBest.Path[i]} ");
+                    }
+                    Debug.Log(builder.ToString());
+
+                    Thread.Sleep(500);
+                    return false;
+                });
+
+                isWorking = resultTask;
+            }
+           
         }
     }
 
@@ -65,8 +98,9 @@ public class Traveller : MonoBehaviour
     {
         for (int i = 0; i < numberOfParents; i++)
         {
-            Specimen newSpecimen = new Specimen(numberOfPoints, pointsToVisit, Enumerable.Range(0, numberOfParents - 1).ToList());
+            Specimen newSpecimen = new Specimen(numberOfPoints, pointsToVisit, Enumerable.Range(0, numberOfParents).ToList());
             newSpecimen.InitializationRandomSwap();
+            CurrentGeneration.Add(newSpecimen);
         }
     }
 
@@ -88,7 +122,6 @@ public class Traveller : MonoBehaviour
                 CyclicCrossover(parent1, parent2);
                 break;
             default:
-
                 break;
         }
 
@@ -120,7 +153,7 @@ public class Traveller : MonoBehaviour
             secondCrossedList[i] = parent2.Path[i];
         }
 
-        Debug.Log($"Cross over indexes: {firstCrossoverIndex} - {secondCrossoverIndex}");
+        //Console.WriteLine($"Cross over indexes: {firstCrossoverIndex} - {secondCrossoverIndex}");
 
         for (int i = 0; i < firstCrossedList.Count; i++)
         {
@@ -131,11 +164,23 @@ public class Traveller : MonoBehaviour
 
                 while (!positionFilledInFirstList)
                 {
-                    if (!firstCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex).Contains(parent2.Path[indexToCopyFromParent2]))
+                    if (!firstCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex - firstCrossoverIndex).
+                        Contains(parent2.Path[indexToCopyFromParent2]))
                     {
-                        firstCrossedList[i] = parent2.Path[indexToCopyFromParent2];
-                        positionFilledInFirstList = true;
-                        indexToCopyFromParent2++;
+                        if (!firstCrossedList.Contains(parent2.Path[indexToCopyFromParent2]))
+                        {
+                            firstCrossedList[i] = parent2.Path[indexToCopyFromParent2];
+                            positionFilledInFirstList = true;
+                        }
+
+                        if (indexToCopyFromParent2 < parent2.Path.Count - 1)
+                        {
+                            indexToCopyFromParent2++;
+                        }
+                        else
+                        {
+                            indexToCopyFromParent2 = 0;
+                        }
                     }
                     else
                     {
@@ -152,11 +197,22 @@ public class Traveller : MonoBehaviour
 
                 while (!positionFilledInSecondList)
                 {
-                    if (!secondCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex).Contains(parent1.Path[indexToCopyFromParent1]))
+                    if (!secondCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex - firstCrossoverIndex).Contains(parent1.Path[indexToCopyFromParent1]))
                     {
-                        secondCrossedList[i] = parent1.Path[indexToCopyFromParent1];
-                        positionFilledInSecondList = true;
-                        indexToCopyFromParent1++;
+                        if (!secondCrossedList.Contains(parent1.Path[indexToCopyFromParent1]))
+                        {
+                            secondCrossedList[i] = parent1.Path[indexToCopyFromParent1];
+                            positionFilledInSecondList = true;
+                        }
+
+                        if (indexToCopyFromParent1 < parent1.Path.Count - 1)
+                        {
+                            indexToCopyFromParent1++;
+                        }
+                        else
+                        {
+                            indexToCopyFromParent1 = 0;
+                        }
                     }
                     else
                     {
@@ -173,14 +229,15 @@ public class Traveller : MonoBehaviour
             }
         }
 
-        for (int i = 0; i < firstCrossedList.Count; i++)
-        {
-            Debug.Log($"{firstCrossedList[i]} ");
-        }
-        for (int i = 0; i < secondCrossedList.Count; i++)
-        {
-            Debug.Log($"{secondCrossedList[i]} ");
-        }
+        //for (int i = 0; i < firstCrossedList.Count; i++)
+        //{
+        //    Console.Write($"{firstCrossedList[i]} ");
+        //}
+        //Console.WriteLine();
+        //for (int i = 0; i < secondCrossedList.Count; i++)
+        //{
+        //    Console.Write($"{secondCrossedList[i]} ");
+        //}
 
         Specimen firstChild = new Specimen(numberOfPoints, pointsToVisit, firstCrossedList);
         Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList);
@@ -202,18 +259,31 @@ public class Traveller : MonoBehaviour
     {
         foreach (Specimen specimen in CurrentGeneration)
         {
-            specimen.Evaluate();
+            specimen.FitnessFunction();
         }
 
-        CurrentGeneration = (from specimen in CurrentGeneration orderby specimen.fitnessLevel select specimen).ToList();
-        currentBest = CurrentGeneration.Last();
+        CurrentGeneration = (from specimen in CurrentGeneration orderby specimen.FitnessLevel select specimen).ToList();
+        if (!currentBest.FitnessLevelSet)
+        {
+            currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path);
+            currentBest.FitnessLevelSet = true;
+            currentBest.FitnessLevel = CurrentGeneration[0].FitnessLevel;
+        }
+
+        if (CurrentGeneration[0].FitnessLevel < currentBest.FitnessLevel)
+        {
+            currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path);
+            currentBest.FitnessLevelSet = true;
+            currentBest.FitnessLevel = CurrentGeneration[0].FitnessLevel;
+            generationsSinceLastMin = 0;
+        }
     }
 
     void Mutation()
     {
+
     }
 
-    //Pairing is done on a "top 3 basis"
     void PairParents()
     {
         //Transfer top 3 over to new generation, remaining numberOfParents-3 is considered the "new generation"
@@ -227,10 +297,16 @@ public class Traveller : MonoBehaviour
         int remainingFreeSpace = numberOfParents - 3;
 
         //ToDo this needs to be verified that it sums up to the correct final value after the new generation is created.
-        requiredChildrenCounts.Item1 = remainingFreeSpace * (50 / 100);
-        requiredChildrenCounts.Item2 = remainingFreeSpace * (20 / 100);
-        requiredChildrenCounts.Item3 = remainingFreeSpace * (30 / 100);
+        requiredChildrenCounts.Item1 = (int)(remainingFreeSpace * (50f / 100f));
+        requiredChildrenCounts.Item2 = (int)(remainingFreeSpace * (20f / 100f));
+        requiredChildrenCounts.Item3 = (int)(remainingFreeSpace * (30f / 100f));
 
+        int estimatedRequiredChildren = requiredChildrenCounts.Item1 + requiredChildrenCounts.Item2 +
+                                        requiredChildrenCounts.Item3;
+        if (estimatedRequiredChildren != remainingFreeSpace)
+        {
+            requiredChildrenCounts.Item1 += remainingFreeSpace - estimatedRequiredChildren;
+        }
         //Top 0-20% with 30-40% -> 50% of the new generation
         ValueTuple<int, int> firstParentSelectionRange = PercentToIndex(0, 20);
         ValueTuple<int, int> secondParentSelectionRange = PercentToIndex(30, 40);
@@ -248,23 +324,46 @@ public class Traveller : MonoBehaviour
         secondParentSelectionRange = PercentToIndex(40, 60);
 
         Reproduce(requiredChildrenCounts.Item3, firstParentSelectionRange, secondParentSelectionRange);
-
-        CurrentGeneration = NewGeneration;
+        CurrentGeneration.Clear();
+        foreach (var specimen in NewGeneration)
+        {
+            CurrentGeneration.Add(new Specimen(numberOfParents, specimen.m_Points, specimen.Path));
+        }
     }
 
     private void Reproduce(int numberOfChildren, ValueTuple<int, int> firstParentSelectionRange, ValueTuple<int, int> secondParentSelectionRange)
     {
         Random randSelector = new Random();
 
+        int firstParentSelectionRangeStart = firstParentSelectionRange.Item1;
+        int firstParentSelectionRangeEnd = firstParentSelectionRange.Item2;
+
+        if (firstParentSelectionRange.Item2 < firstParentSelectionRange.Item1)
+        {
+            firstParentSelectionRangeStart = firstParentSelectionRange.Item2;
+            firstParentSelectionRangeEnd = firstParentSelectionRange.Item1;
+        }
+
+        int secondParentSelectionRangeStart = secondParentSelectionRange.Item1;
+        int secondParentSelectionRangeEnd = secondParentSelectionRange.Item2;
+
+        if (secondParentSelectionRange.Item2 < secondParentSelectionRange.Item1)
+        {
+            secondParentSelectionRangeStart = secondParentSelectionRange.Item2;
+            secondParentSelectionRangeEnd = secondParentSelectionRange.Item1;
+        }
+
+
+
         for (int i = 0; i < numberOfChildren; i++)
         {
             Specimen firstParent =
                 CurrentGeneration[
-                    randSelector.Next(firstParentSelectionRange.Item1, firstParentSelectionRange.Item2)];
+                    randSelector.Next(firstParentSelectionRangeStart, firstParentSelectionRangeEnd)];
 
             Specimen secondParent =
                 CurrentGeneration[
-                    randSelector.Next(secondParentSelectionRange.Item1, secondParentSelectionRange.Item2)];
+                    randSelector.Next(secondParentSelectionRangeStart, secondParentSelectionRangeEnd)];
 
             Crossover(CrossoverType.twoPoint, firstParent, secondParent);
         }
@@ -275,9 +374,9 @@ public class Traveller : MonoBehaviour
     {
         ValueTuple<int, int> indexRange;
 
-        indexRange.Item1 = numberOfParents * (startPercent - 10 / 100);
+        indexRange.Item1 = (int)(numberOfParents * ((float)startPercent / 100f));
         //NOTE in the case of 100 parents 10% returns 10, if you want the correct index subtract 1;
-        indexRange.Item2 = numberOfParents * (endPercent / 100);
+        indexRange.Item2 = (int)(numberOfParents * ((float)endPercent / 100f));
 
         return indexRange;
     }
@@ -288,7 +387,7 @@ public class Traveller : MonoBehaviour
 
         for (int i = 0; i < numberOfPoints; i++)
         {
-            pointsToVisit.Add(new Vector3Int(mRand.Next(-1000, 1000), 0, mRand.Next(-1000, 1000)));
+            pointsToVisit.Add(new Point(mRand.Next(-1000, 1000), mRand.Next(-1000, 1000)));
         }
 
         VisualizeTowns();
@@ -296,16 +395,27 @@ public class Traveller : MonoBehaviour
 
     void VisualizeTowns()
     {
-        foreach (Vector3Int vector3Int in pointsToVisit)
+        List<Vector3Int> vectorizedPoints = new List<Vector3Int>();
+        foreach (Point point in pointsToVisit)
+        {
+            vectorizedPoints.Add(new Vector3Int(point.X, 1, point.Y));
+        }
+
+        foreach (Vector3Int vector3Int in vectorizedPoints)
         {
             GameObject town = Instantiate(TownGameObject, vector3Int, Quaternion.identity);
         }
     }
 
 
-    void VisualizeRoute(Specimen specimen)
+    void VisualizeRoute()
     {
-
+        List<Vector3Int> vectorizedPoints = new List<Vector3Int>();
+        foreach (Point point in pointsToVisit)
+        {
+            vectorizedPoints.Add(new Vector3Int(point.X, 1, point.Y));
+        }
+        PathVisualizer.UpdatePointList(currentBest.Path, vectorizedPoints);
     }
 }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using UnityEngine;
 using Random = System.Random;
 enum MutationType
@@ -9,14 +10,14 @@ enum MutationType
     insert,
     reverse
 }
-
-public class Specimen : MonoBehaviour
+class Specimen
 {
     public List<int> Path;
-    public int fitnessLevel = 0;
-    private List<Vector3Int> m_Points;
+    public double FitnessLevel = 0;
+    public bool FitnessLevelSet = false;
+    public List<Point> m_Points;
 
-    public Specimen(int numberOfPoints, List<Vector3Int> points, List<int> path)
+    public Specimen(int numberOfPoints, List<Point> points, List<int> path)
     {
         Path = path;
         m_Points = points;
@@ -33,9 +34,19 @@ public class Specimen : MonoBehaviour
 
     }
 
-    void FitnessFunction(Specimen specimen)
+    public void FitnessFunction()
     {
+        for (int i = 0; i < m_Points.Count - 1; i++)
+        {
+            FitnessLevel += EucDistance(m_Points[Path[i]], m_Points[Path[i + 1]]);
+        }
+    }
 
+    double EucDistance(Point firstPoint, Point secondPoint)
+    {
+        int xDiff = firstPoint.X - secondPoint.X;
+        int yDiff = firstPoint.Y - secondPoint.Y;
+        return Math.Sqrt(Math.Pow(xDiff, 2) + Math.Pow(yDiff, 2));
     }
 
     void Mutate(MutationType mutation, Specimen child)
@@ -70,10 +81,13 @@ public class Specimen : MonoBehaviour
 
     public void InitializationRandomSwap()
     {
-        Random milRand = new System.Random();
+        Random rand = new System.Random();
+
         for (int i = 0; i < Path.Count; i++)
         {
-            SwapMutation(milRand.Next(0, Path.Count), milRand.Next(0, Path.Count));
+            int firstRandIndex = rand.Next(0, Path.Count);
+            int secondRandIndex = rand.Next(0, Path.Count);
+            SwapMutation(firstRandIndex, secondRandIndex);
         }
     }
 
@@ -82,11 +96,4 @@ public class Specimen : MonoBehaviour
     {
 
     }
-
-    public void Evaluate()
-    {
-
-    }
-
-
 }
