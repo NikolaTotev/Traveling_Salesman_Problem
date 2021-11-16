@@ -6,7 +6,11 @@ namespace Traveling_Salesman_CLI
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Traveller traveller = new Traveller();
+            traveller.Evolve();
+
+
+
         }
     }
 }

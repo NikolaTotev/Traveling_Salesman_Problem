@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 
 namespace CrossoverTesting
 {
@@ -22,66 +23,144 @@ namespace CrossoverTesting
 
             int numberOfPoints = 100;
             int numberOfParents = 100;
+            Crossover(CrossoverType.twoPoint, firstPointList, secondPointList);
         }
 
-        Specimen Crossover(CrossoverType crossover, Specimen parent1, Specimen parent2)
+        static void Crossover(CrossoverType crossover, List<int> parent1, List<int> parent2)
         {
-            Specimen crossoverResult;
+            Console.WriteLine("Parent lists.");
+
+            for (int i = 0; i < parent1.Count; i++)
+            {
+                Console.Write($"{parent1[i]} ");
+            }
+            Console.WriteLine();
+            for (int i = 0; i < parent2.Count; i++)
+            {
+                Console.Write($"{parent2[i]} ");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine("Results from crossing");
+
             switch (crossover)
             {
                 case CrossoverType.onePoint:
-                    crossoverResult = OnePointCrossover(parent1, parent1);
+                    OnePointCrossover(parent1, parent1);
                     break;
                 case CrossoverType.twoPoint:
-                    crossoverResult = TwoPointCrossover(parent1, parent2);
+                    TwoPointCrossover(parent1, parent2);
                     break;
                 case CrossoverType.partialMap:
-                    crossoverResult = PartialMapCrossover(parent1, parent2);
+                    PartialMapCrossover(parent1, parent2);
                     break;
                 case CrossoverType.cyclic:
-                    crossoverResult = CyclicCrossover(parent1, parent2);
-                    break;
-                default:
-                    crossoverResult = null;
+                    CyclicCrossover(parent1, parent2);
                     break;
             }
-
-            return crossoverResult;
         }
 
-        private Specimen OnePointCrossover(Specimen parent1, Specimen parent2)
+        private static Specimen OnePointCrossover(List<int> parent1, List<int> parent2)
         {
             return null;
         }
 
-        private Specimen TwoPointCrossover(Specimen parent1, Specimen parent2)
+        private static void TwoPointCrossover(List<int> parent1, List<int> parent2)
         {
             Specimen newSpecimen;
-            List<int> firstCrossedList = parent1.Path;
-            List<int> secondCrossedList = parent2.Path;
+            List<int> firstCrossedList = Enumerable.Repeat(-1, parent1.Count).ToList();
+            List<int> secondCrossedList = Enumerable.Repeat(-1, parent2.Count).ToList();
             Random rand = new Random();
-            int midpoint = parent1.Path.Count / 2;
+
+            int midpoint = parent1.Count / 2;
 
 
             int firstCrossoverIndex = rand.Next(midpoint - midpoint / 2, midpoint);
-            int secondCrossoverIndex = rand.Next(midpoint+1, midpoint + midpoint / 2);
+            int secondCrossoverIndex = rand.Next(midpoint + 1, midpoint + midpoint / 2);
+
+            int indexToCopyFromParent1 = 0;
+            int indexToCopyFromParent2 = 0;
+
+            for (int i = firstCrossoverIndex; i <= secondCrossoverIndex; i++)
+            {
+                firstCrossedList[i] = parent1[i];
+                secondCrossedList[i] = parent2[i];
+            }
+
+            Console.WriteLine($"Cross over indexes: {firstCrossoverIndex} - {secondCrossoverIndex}");
 
             for (int i = 0; i < firstCrossedList.Count; i++)
             {
                 if (i < firstCrossoverIndex || i > secondCrossoverIndex)
                 {
-                    firstCrossedList[i] = parent2.Path[i];
-                    secondCrossedList[i] = parent1.Path[i];
+                    bool positionFilledInFirstList = false;
+                    bool positionFilledInSecondList = false;
+
+                    while (!positionFilledInFirstList)
+                    {
+                        if (!firstCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex).Contains(parent2[indexToCopyFromParent2]))
+                        {
+                            firstCrossedList[i] = parent2[indexToCopyFromParent2];
+                            positionFilledInFirstList = true;
+                            indexToCopyFromParent2++;
+                        }
+                        else
+                        {
+                            if (indexToCopyFromParent2 < parent2.Count - 1)
+                            {
+                                indexToCopyFromParent2++;
+                            }
+                            else
+                            {
+                                indexToCopyFromParent2 = 0;
+                            }
+
+                        }
+
+                    }
+
+                    while (!positionFilledInSecondList)
+                    {
+                        if (!secondCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex).Contains(parent1[indexToCopyFromParent1]))
+                        {
+                            secondCrossedList[i] = parent1[indexToCopyFromParent1];
+                            positionFilledInSecondList = true;
+                            indexToCopyFromParent1++;
+                        }
+                        else
+                        {
+                            if (indexToCopyFromParent1 < parent1.Count - 1)
+                            {
+                                indexToCopyFromParent1++;
+                            }
+                            else
+                            {
+                                indexToCopyFromParent1 = 0;
+                            }
+                        }
+
+                    }
                 }
+            }
+
+            for (int i = 0; i < firstCrossedList.Count; i++)
+            {
+                Console.Write($"{firstCrossedList[i]} ");
+            }
+            Console.WriteLine();
+            for (int i = 0; i < secondCrossedList.Count; i++)
+            {
+                Console.Write($"{secondCrossedList[i]} ");
             }
         }
 
-        private Specimen PartialMapCrossover(Specimen parent1, Specimen parent2)
+        private static Specimen PartialMapCrossover(List<int> parent1, List<int> parent2)
         {
             return null;
         }
 
-        private Specimen CyclicCrossover(Specimen parent1, Specimen parent2)
+        private static Specimen CyclicCrossover(List<int> parent1, List<int> parent2)
         {
             return null;
         }
@@ -139,12 +218,12 @@ namespace CrossoverTesting
 
         void SwapMutation(int index1, int index2)
         {
-            (path[index1], path[index2]) = (path[index2], path[index1]);
+            (Path[index1], Path[index2]) = (Path[index2], Path[index1]);
         }
 
         void InsertMutation(int index, int value)
         {
-            path.Insert(index, value);
+            Path.Insert(index, value);
         }
 
         void ReverseMutation()
@@ -155,9 +234,9 @@ namespace CrossoverTesting
         public void InitializationRandomSwap()
         {
             Random milRand = new System.Random();
-            for (int i = 0; i < path.Count; i++)
+            for (int i = 0; i < Path.Count; i++)
             {
-                SwapMutation(milRand.Next(0, path.Count), milRand.Next(0, path.Count));
+                SwapMutation(milRand.Next(0, Path.Count), milRand.Next(0, Path.Count));
             }
         }
 

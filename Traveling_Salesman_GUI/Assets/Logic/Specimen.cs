@@ -12,18 +12,13 @@ enum MutationType
 
 public class Specimen : MonoBehaviour
 {
-    private List<int> path;
+    public List<int> Path;
     public int fitnessLevel = 0;
     private List<Vector3Int> m_Points;
 
-    public Specimen(int numberOfPoints, List<Vector3Int> points)
+    public Specimen(int numberOfPoints, List<Vector3Int> points, List<int> path)
     {
-        path = new List<int>();
-        for (int i = 0; i < numberOfPoints; i++)
-        {
-            path.Add(i+1);
-        }
-
+        Path = path;
         m_Points = points;
     }
     // Start is called before the first frame update
@@ -60,12 +55,12 @@ public class Specimen : MonoBehaviour
 
     void SwapMutation(int index1, int index2)
     {
-        (path[index1], path[index2]) = (path[index2], path[index1]);
+        (Path[index1], Path[index2]) = (Path[index2], Path[index1]);
     }
 
     void InsertMutation(int index, int value)
     {
-        path.Insert(index, value);
+        Path.Insert(index, value);
     }
 
     void ReverseMutation()
@@ -76,9 +71,9 @@ public class Specimen : MonoBehaviour
     public void InitializationRandomSwap()
     {
         Random milRand = new System.Random();
-        for (int i = 0; i < path.Count; i++)
+        for (int i = 0; i < Path.Count; i++)
         {
-            SwapMutation(milRand.Next(0, path.Count), milRand.Next(0, path.Count));
+            SwapMutation(milRand.Next(0, Path.Count), milRand.Next(0, Path.Count));
         }
     }
 
