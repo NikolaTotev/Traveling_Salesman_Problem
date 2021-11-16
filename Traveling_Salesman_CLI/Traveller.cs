@@ -25,6 +25,7 @@ namespace Traveling_Salesman_CLI
 
         public int numberOfPoints = 20;
         public int numberOfParents = 20;
+    
 
         public CrossoverType currentCrossoverType = CrossoverType.twoPoint;
         //public GameObject TownGameObject;
@@ -78,7 +79,7 @@ namespace Traveling_Salesman_CLI
                 }
                 Console.WriteLine("=============================================================");
                 Console.WriteLine("=============================================================");
-                Thread.Sleep(100);
+                //Thread.Sleep(100);
             }
         }
 

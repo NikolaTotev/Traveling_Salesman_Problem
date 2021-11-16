@@ -26,6 +26,8 @@ public class Traveller : MonoBehaviour
 
     public int numberOfPoints = 20;
     public int numberOfParents = 20;
+    public int noChangeCutoff = 100;
+    public int saveTopNCount = 3;
 
     public CrossoverType currentCrossoverType = CrossoverType.twoPoint;
     public GameObject TownGameObject;
@@ -53,7 +55,6 @@ public class Traveller : MonoBehaviour
     void Update()
     {
         EvolveAsync();
-        VisualizeRoute();
     }
 
     private bool isWorking = false;
@@ -61,7 +62,7 @@ public class Traveller : MonoBehaviour
     public async void EvolveAsync()
     {
 
-        if (generationsSinceLastMin < 20 && numberOfGenerations < 5000)
+        if (generationsSinceLastMin < noChangeCutoff && numberOfGenerations < 5000)
         {
             if (!isWorking)
             {
@@ -89,8 +90,10 @@ public class Traveller : MonoBehaviour
                 });
 
                 isWorking = resultTask;
+                VisualizeRoute();
+
             }
-           
+
         }
     }
 
@@ -101,12 +104,12 @@ public class Traveller : MonoBehaviour
             Specimen newSpecimen = new Specimen(numberOfPoints, pointsToVisit, Enumerable.Range(0, numberOfParents).ToList());
             newSpecimen.InitializationRandomSwap();
             CurrentGeneration.Add(newSpecimen);
+            Thread.Sleep(400);
         }
     }
 
     void Crossover(CrossoverType crossover, Specimen parent1, Specimen parent2)
     {
-        Specimen crossoverResult;
         switch (crossover)
         {
             case CrossoverType.onePoint:
@@ -240,9 +243,9 @@ public class Traveller : MonoBehaviour
         //}
 
         Specimen firstChild = new Specimen(numberOfPoints, pointsToVisit, firstCrossedList);
-        Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList);
+        //Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList);
         NewGeneration.Add(firstChild);
-        NewGeneration.Add(secondChild);
+        //NewGeneration.Add(secondChild);
     }
 
     private Specimen PartialMapCrossover(Specimen parent1, Specimen parent2)
@@ -262,7 +265,8 @@ public class Traveller : MonoBehaviour
             specimen.FitnessFunction();
         }
 
-        CurrentGeneration = (from specimen in CurrentGeneration orderby specimen.FitnessLevel select specimen).ToList();
+        var thing = (from specimen in CurrentGeneration orderby specimen.FitnessLevel select specimen).ToList();
+        CurrentGeneration = thing;
         if (!currentBest.FitnessLevelSet)
         {
             currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path);
@@ -287,14 +291,14 @@ public class Traveller : MonoBehaviour
     void PairParents()
     {
         //Transfer top 3 over to new generation, remaining numberOfParents-3 is considered the "new generation"
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < saveTopNCount; i++)
         {
             NewGeneration.Add(CurrentGeneration[i]);
         }
 
         ValueTuple<int, int, int> requiredChildrenCounts;
 
-        int remainingFreeSpace = numberOfParents - 3;
+        int remainingFreeSpace = numberOfParents - saveTopNCount;
 
         //ToDo this needs to be verified that it sums up to the correct final value after the new generation is created.
         requiredChildrenCounts.Item1 = (int)(remainingFreeSpace * (50f / 100f));
@@ -329,6 +333,7 @@ public class Traveller : MonoBehaviour
         {
             CurrentGeneration.Add(new Specimen(numberOfParents, specimen.m_Points, specimen.Path));
         }
+        NewGeneration.Clear();
     }
 
     private void Reproduce(int numberOfChildren, ValueTuple<int, int> firstParentSelectionRange, ValueTuple<int, int> secondParentSelectionRange)
