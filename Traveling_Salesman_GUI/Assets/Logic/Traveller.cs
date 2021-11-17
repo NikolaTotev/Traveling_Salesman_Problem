@@ -1,17 +1,13 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Random = System.Random;
-[Flags]
+
 public enum CrossoverType
 {
     onePoint,
@@ -19,81 +15,64 @@ public enum CrossoverType
     partialMap,
     cyclic
 }
-public class Traveller : MonoBehaviour
+
+public class Traveller
 {
-    public Visualizer PathVisualizer;
-    private List<Point> pointsToVisit = new List<Point>();
+    public List<Point> pointsToVisit = new List<Point>();
 
     public int numberOfPoints = 20;
     public int numberOfParents = 20;
-    public int noChangeCutoff = 100;
-    public int saveTopNCount = 3;
+
 
     public CrossoverType currentCrossoverType = CrossoverType.twoPoint;
-    public GameObject TownGameObject;
+    //public GameObject TownGameObject;
     private bool pointsDrawn;
     private List<Specimen> CurrentGeneration = new List<Specimen>();
     private List<Specimen> NewGeneration = new List<Specimen>();
-    private Specimen currentBest;
+    public Specimen currentBest;
     Tuple<int, int> firstPair = new Tuple<int, int>(0, 0);
     Tuple<int, int> secondPair = new Tuple<int, int>(0, 0);
 
     private int generationsSinceLastMin = 0;
 
     private int numberOfGenerations = 0;
-    // Start is called before the first frame update
-    void Start()
+
+
+    public Traveller(int pointNum, int parentNum)
     {
+        numberOfPoints = pointNum;
+        numberOfParents = parentNum;
         GeneratePoints();
         CreateFirstGeneration();
         currentBest = new Specimen(0, pointsToVisit, null);
         currentBest.FitnessLevelSet = false;
         EvaluateGeneration();
-        VisualizeRoute();
     }
 
-    void Update()
-    {
-        EvolveAsync();
-    }
 
-    private bool isWorking = false;
-     
-    public async void EvolveAsync()
+    public void Evolve()
     {
 
-        if (generationsSinceLastMin < noChangeCutoff && numberOfGenerations < 5000)
+        if (generationsSinceLastMin < 20 && numberOfGenerations < 5000)
         {
-            if (!isWorking)
+            PairParents();
+            EvaluateGeneration();
+            VisualizeRoute(currentBest);
+            generationsSinceLastMin++;
+            numberOfGenerations++;
+
+            Debug.Log($"Current Generation: {numberOfGenerations}");
+            Debug.Log($"Generations since last new min: {generationsSinceLastMin}");
+            Debug.Log($"Best fitness level: {currentBest.FitnessLevel}");
+
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < currentBest.Path.Count; i++)
             {
-                isWorking = true;
-                var resultTask = await Task.Run(() => {
-                    PairParents();
-                    Mutation();
-                    EvaluateGeneration();
-                    generationsSinceLastMin++;
-                    numberOfGenerations++;
-
-                    Debug.Log($"Current Generation: {numberOfGenerations}");
-                    Debug.Log($"Generations since last new min: {generationsSinceLastMin}");
-                    Debug.Log($"Best fitness level: {currentBest.FitnessLevel}");
-
-                    StringBuilder builder = new StringBuilder();
-                    for (int i = 0; i < currentBest.Path.Count; i++)
-                    {
-                        builder.Append($"{currentBest.Path[i]} ");
-                    }
-                    Debug.Log(builder.ToString());
-
-                    Thread.Sleep(500);
-                    return false;
-                });
-
-                isWorking = resultTask;
-                VisualizeRoute();
-
+                builder.Append($"{currentBest.Path[i]} ");
             }
 
+            Debug.Log(builder.ToString());
+            Thread.Sleep(100);
         }
     }
 
@@ -104,12 +83,12 @@ public class Traveller : MonoBehaviour
             Specimen newSpecimen = new Specimen(numberOfPoints, pointsToVisit, Enumerable.Range(0, numberOfParents).ToList());
             newSpecimen.InitializationRandomSwap();
             CurrentGeneration.Add(newSpecimen);
-            Thread.Sleep(400);
         }
     }
 
     void Crossover(CrossoverType crossover, Specimen parent1, Specimen parent2)
     {
+        Specimen crossoverResult;
         switch (crossover)
         {
             case CrossoverType.onePoint:
@@ -243,9 +222,9 @@ public class Traveller : MonoBehaviour
         //}
 
         Specimen firstChild = new Specimen(numberOfPoints, pointsToVisit, firstCrossedList);
-        //Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList);
+        Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList);
         NewGeneration.Add(firstChild);
-        //NewGeneration.Add(secondChild);
+        NewGeneration.Add(secondChild);
     }
 
     private Specimen PartialMapCrossover(Specimen parent1, Specimen parent2)
@@ -265,8 +244,7 @@ public class Traveller : MonoBehaviour
             specimen.FitnessFunction();
         }
 
-        var thing = (from specimen in CurrentGeneration orderby specimen.FitnessLevel select specimen).ToList();
-        CurrentGeneration = thing;
+        CurrentGeneration = (from specimen in CurrentGeneration orderby specimen.FitnessLevel select specimen).ToList();
         if (!currentBest.FitnessLevelSet)
         {
             currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path);
@@ -291,16 +269,17 @@ public class Traveller : MonoBehaviour
     void PairParents()
     {
         //Transfer top 3 over to new generation, remaining numberOfParents-3 is considered the "new generation"
-        for (int i = 0; i < saveTopNCount; i++)
+        for (int i = 0; i < 3; i++)
         {
             NewGeneration.Add(CurrentGeneration[i]);
         }
 
         ValueTuple<int, int, int> requiredChildrenCounts;
 
-        int remainingFreeSpace = numberOfParents - saveTopNCount;
+        int remainingFreeSpace = numberOfParents - 3;
 
         //ToDo this needs to be verified that it sums up to the correct final value after the new generation is created.
+        int fiftyPercent = 50 / 100;
         requiredChildrenCounts.Item1 = (int)(remainingFreeSpace * (50f / 100f));
         requiredChildrenCounts.Item2 = (int)(remainingFreeSpace * (20f / 100f));
         requiredChildrenCounts.Item3 = (int)(remainingFreeSpace * (30f / 100f));
@@ -333,7 +312,6 @@ public class Traveller : MonoBehaviour
         {
             CurrentGeneration.Add(new Specimen(numberOfParents, specimen.m_Points, specimen.Path));
         }
-        NewGeneration.Clear();
     }
 
     private void Reproduce(int numberOfChildren, ValueTuple<int, int> firstParentSelectionRange, ValueTuple<int, int> secondParentSelectionRange)
@@ -395,32 +373,21 @@ public class Traveller : MonoBehaviour
             pointsToVisit.Add(new Point(mRand.Next(-1000, 1000), mRand.Next(-1000, 1000)));
         }
 
-        VisualizeTowns();
+        //VisualizeTowns();
     }
 
-    void VisualizeTowns()
+    //void VisualizeTowns()
+    //{
+    //    foreach (Vector3Int vector3Int in pointsToVisit)
+    //    {
+    //        GameObject town = Instantiate(TownGameObject, vector3Int, Quaternion.identity);
+    //    }
+    //}
+
+
+    void VisualizeRoute(Specimen specimen)
     {
-        List<Vector3Int> vectorizedPoints = new List<Vector3Int>();
-        foreach (Point point in pointsToVisit)
-        {
-            vectorizedPoints.Add(new Vector3Int(point.X, 1, point.Y));
-        }
 
-        foreach (Vector3Int vector3Int in vectorizedPoints)
-        {
-            GameObject town = Instantiate(TownGameObject, vector3Int, Quaternion.identity);
-        }
-    }
-
-
-    void VisualizeRoute()
-    {
-        List<Vector3Int> vectorizedPoints = new List<Vector3Int>();
-        foreach (Point point in pointsToVisit)
-        {
-            vectorizedPoints.Add(new Vector3Int(point.X, 1, point.Y));
-        }
-        PathVisualizer.UpdatePointList(currentBest.Path, vectorizedPoints);
     }
 }
 

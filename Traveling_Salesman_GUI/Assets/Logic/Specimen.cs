@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using System.Drawing;
 using UnityEngine;
 using Random = System.Random;
-enum MutationType
+public enum MutationType
 {
     swap,
     insert,
     reverse
 }
-class Specimen
+public class Specimen
 {
     public List<int> Path;
     public double FitnessLevel = 0;
@@ -22,18 +22,7 @@ class Specimen
         Path = path;
         m_Points = points;
     }
-    // Start is called before the first frame update
-    void Start()
-    {
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
-
+    
     public void FitnessFunction()
     {
         for (int i = 0; i < m_Points.Count - 1; i++)

@@ -58,9 +58,9 @@
   <ItemGroup>
     <Compile Include="Assets\CameraMovement.cs" />
     <Compile Include="Assets\Logic\ProgramManager.cs" />
+    <Compile Include="Assets\Visualizer.cs" />
     <Compile Include="Assets\Logic\Specimen.cs" />
     <Compile Include="Assets\Logic\Traveller.cs" />
-    <Compile Include="Assets\Visualizer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">

@@ -68,7 +68,6 @@ namespace CrossoverTesting
 
         private static void TwoPointCrossover(List<int> parent1, List<int> parent2)
         {
-            Specimen newSpecimen;
             List<int> firstCrossedList = Enumerable.Repeat(-1, parent1.Count).ToList();
             List<int> secondCrossedList = Enumerable.Repeat(-1, parent2.Count).ToList();
             Random rand = new Random();
