@@ -20,8 +20,9 @@ namespace Traveling_Salesman_CLI
         public double FitnessLevel = 0;
         public bool FitnessLevelSet = false;
         public List<PointF> m_Points;
+        private int m_popSize;
 
-        public Specimen(int numberOfPoints, List<PointF> points, List<int> path)
+        public Specimen(int numberOfPoints, List<PointF> points, List<int> path, int popSize)
         {
             Path = new List<int>();
             foreach (var i in path)
@@ -29,6 +30,7 @@ namespace Traveling_Salesman_CLI
                 Path.Add(i);
             }
 
+            m_popSize = popSize;
 
             m_Points = points;
         }
@@ -46,7 +48,7 @@ namespace Traveling_Salesman_CLI
 
         public void FitnessFunction()
         {
-            for (int i = 0; i < m_Points.Count - 1; i++)
+            for (int i = 0; i < Path.Count - 1; i++)
             {
                 FitnessLevel += EucDistance(m_Points[Path[i]], m_Points[Path[i + 1]]);
             }

@@ -66,9 +66,8 @@ namespace Traveling_Salesman_CLI
         {
             GeneratePointsFromList();
             numberOfPoints = hardcoded.Count;
-            numberOfParents = hardcoded.Count;
             CreateFirstGeneration();
-            currentBest = new Specimen(0, pointsToVisit, new List<int>());
+            currentBest = new Specimen(0, pointsToVisit, new List<int>(), numberOfParents);
             currentBest.FitnessLevelSet = false;
             EvaluateGeneration();
         }
@@ -109,7 +108,7 @@ namespace Traveling_Salesman_CLI
         {
             for (int i = 0; i < numberOfParents; i++)
             {
-                Specimen newSpecimen = new Specimen(numberOfPoints, pointsToVisit, Enumerable.Range(0, numberOfParents).ToList());
+                Specimen newSpecimen = new Specimen(numberOfPoints, pointsToVisit, Enumerable.Range(0, hardcoded.Count).ToList(), numberOfParents);
                 newSpecimen.InitializationRandomSwap();
                 CurrentGeneration.Add(newSpecimen);
             }
@@ -173,8 +172,8 @@ namespace Traveling_Salesman_CLI
             List<int> firstCrossedList = TwoPointCross(firstCrossoverIndex, secondCrossoverIndex, parent1.Path, parent2.Path);
             List<int> secondCrossedList = TwoPointCross(firstCrossoverIndex, secondCrossoverIndex, parent2.Path, parent1.Path);
 
-            Specimen firstChild = new Specimen(numberOfPoints, pointsToVisit, firstCrossedList);
-            Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList);
+            Specimen firstChild = new Specimen(numberOfPoints, pointsToVisit, firstCrossedList, numberOfParents);
+            Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList, numberOfParents);
 
             int mutationRandom = rand.Next(4242, 424242);
 
@@ -302,14 +301,14 @@ namespace Traveling_Salesman_CLI
             CurrentGeneration = (from specimen in CurrentGeneration orderby specimen.FitnessLevel select specimen).ToList();
             if (!currentBest.FitnessLevelSet)
             {
-                currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path);
+                currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path, numberOfParents);
                 currentBest.FitnessLevelSet = true;
                 currentBest.FitnessLevel = CurrentGeneration[0].FitnessLevel;
             }
 
             if (CurrentGeneration[0].FitnessLevel < currentBest.FitnessLevel)
             {
-                currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path);
+                currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path, numberOfParents);
                 currentBest.FitnessLevelSet = true;
                 currentBest.FitnessLevel = CurrentGeneration[0].FitnessLevel;
                 generationsSinceLastMin = 0;
@@ -326,7 +325,7 @@ namespace Traveling_Salesman_CLI
             //Transfer top 3 over to new generation, remaining numberOfParents-3 is considered the "new generation"
             for (int i = 0; i < topNToSave; i++)
             {
-                NewGeneration.Add(new Specimen(numberOfPoints, CurrentGeneration[i].m_Points, CurrentGeneration[i].Path));
+                NewGeneration.Add(new Specimen(numberOfPoints, CurrentGeneration[i].m_Points, CurrentGeneration[i].Path, numberOfParents));
             }
 
             ValueTuple<int, int, int> requiredChildrenCounts;
@@ -364,7 +363,7 @@ namespace Traveling_Salesman_CLI
             CurrentGeneration.Clear();
             foreach (var specimen in NewGeneration)
             {
-                CurrentGeneration.Add(new Specimen(numberOfParents, specimen.m_Points, specimen.Path));
+                CurrentGeneration.Add(new Specimen(numberOfParents, specimen.m_Points, specimen.Path, numberOfParents));
             }
         }
 

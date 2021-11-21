@@ -9,14 +9,24 @@ namespace Traveling_Salesman_CLI
     {
         static void Main(string[] args)
         {
-            Specimen allTimeBest = new Specimen(0, new List<PointF>(), new List<int>());
+            Specimen allTimeBest = new Specimen(0, new List<PointF>(), new List<int>(), 0);
             Traveller traveller = new Traveller();
             bool allTimeBestSet = false;
+            long attemptCounter = 0;
             Console.CancelKeyPress += delegate {
+
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
+
                 Console.WriteLine("Stopping code");
                 Console.WriteLine("============================= Results ==================================");
 
                 Console.WriteLine($"Best path length: {allTimeBest.FitnessLevel}");
+                Console.WriteLine($"Number of attempts: {attemptCounter}");
                 Console.WriteLine();
                 Console.WriteLine();
                 Console.WriteLine("Path in index form");
@@ -31,11 +41,21 @@ namespace Traveling_Salesman_CLI
                 {
                     Console.Write($"{traveller.hardcoded[allTimeBest.Path[i]].Item1} ");
                 }
+
+                Console.WriteLine();
                 Console.WriteLine();
                 Console.WriteLine("========================================================================");
+
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
             };
             while (true)
             {
+                attemptCounter++;
                 traveller = new Traveller();
                 traveller.Evolve();
                 Console.WriteLine("===============================================================");
