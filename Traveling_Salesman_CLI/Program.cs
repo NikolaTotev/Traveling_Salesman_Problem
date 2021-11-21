@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace Traveling_Salesman_CLI
 {
@@ -6,8 +7,16 @@ namespace Traveling_Salesman_CLI
     {
         static void Main(string[] args)
         {
-            Traveller traveller = new Traveller();
-            traveller.Evolve();
+            while (true)
+            {
+                Traveller traveller = new Traveller();
+                traveller.Evolve();
+                Console.WriteLine("===============================================================");
+                Console.WriteLine("========================== NEW TEST =========================== ");
+                Console.WriteLine("===============================================================");
+                Thread.Sleep(1000);
+            }
+            
 
 
 

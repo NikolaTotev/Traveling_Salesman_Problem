@@ -46,9 +46,9 @@ namespace Traveling_Salesman_CLI
 
         public void FitnessFunction()
         {
-            for (int i = 0; i < m_Points.Count-1; i++)
+            for (int i = 0; i < m_Points.Count - 1; i++)
             {
-                FitnessLevel += EucDistance(m_Points[Path[i]], m_Points[Path[i+1]]);
+                FitnessLevel += EucDistance(m_Points[Path[i]], m_Points[Path[i + 1]]);
             }
         }
 
@@ -74,7 +74,7 @@ namespace Traveling_Salesman_CLI
             }
         }
 
-        void SwapMutation(int index1, int index2)
+        public void SwapMutation(int index1, int index2)
         {
             (Path[index1], Path[index2]) = (Path[index2], Path[index1]);
         }
@@ -84,8 +84,16 @@ namespace Traveling_Salesman_CLI
             Path.Insert(index, value);
         }
 
-        void ReverseMutation()
+        public void ReverseMutation(int firstIndex, int secondIndex)
         {
+            List<int> revPart = Path.GetRange(firstIndex, secondIndex - firstIndex);
+            revPart.Reverse();
+            int counter = 0;
+            for (int i = firstIndex; i < firstIndex+(secondIndex-firstIndex); i++)
+            {
+                Path[i] = revPart[counter];
+                counter++;
+            }
 
         }
 
