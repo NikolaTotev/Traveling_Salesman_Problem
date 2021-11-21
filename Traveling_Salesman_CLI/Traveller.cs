@@ -21,11 +21,12 @@ namespace Traveling_Salesman_CLI
 
     class Traveller
     {
-        private List<Point> pointsToVisit = new List<Point>();
+        private List<PointF> pointsToVisit = new List<PointF>();
 
         public int numberOfPoints = 20;
         public int numberOfParents = 20;
-    
+        public int maxGensWithNoImprovment = 500;
+
 
         public CrossoverType currentCrossoverType = CrossoverType.twoPoint;
         //public GameObject TownGameObject;
@@ -33,9 +34,7 @@ namespace Traveling_Salesman_CLI
         private List<Specimen> CurrentGeneration = new List<Specimen>();
         private List<Specimen> NewGeneration = new List<Specimen>();
         private Specimen currentBest;
-        Tuple<int, int> firstPair = new Tuple<int, int>(0, 0);
-        Tuple<int, int> secondPair = new Tuple<int, int>(0, 0);
-
+      
         private int generationsSinceLastMin = 0;
 
         private int numberOfGenerations = 0;
@@ -47,9 +46,27 @@ namespace Traveling_Salesman_CLI
         //    EvaluateGeneration();
         //}
 
+        private List<Tuple<string, float, float>> hardcoded = new List<Tuple<string, float, float>>()
+        {
+            new Tuple<string, float, float>("Aberystwyth", 0.00019f, -0.00028f),
+            new Tuple<string, float, float>("Brighton", 383.458f, -0.00060f),
+            new Tuple<string, float, float>("Edinburgh", -27.0206f, -282.758f),
+            new Tuple<string, float, float>("Exeter", 335.751f, -269.577f),
+            new Tuple<string, float, float>("Glasgow", 69.4331f, -246.78f),
+            new Tuple<string, float, float>("Inverness", 168.521f, 31.4012f),
+            new Tuple<string, float, float>("Liverpool", 320.35f, -160.9f),
+            new Tuple<string, float, float>("London", 179.933f, -318.031f),
+            new Tuple<string, float, float>("Newcastle", 492.671f, -131.563f),
+            new Tuple<string, float, float>("Nottingham", 112.198f, -110.561f),
+            new Tuple<string, float, float>("Oxford", 306.32f, -108.09f),
+            new Tuple<string, float, float>("Stratford", 217.343f, -447.089f)
+        };
+
         public Traveller()
         {
-            GeneratePoints();
+            GeneratePointsFromList();
+            numberOfPoints = hardcoded.Count;
+            numberOfParents = hardcoded.Count;
             CreateFirstGeneration();
             currentBest = new Specimen(0, pointsToVisit, null);
             currentBest.FitnessLevelSet = false;
@@ -60,7 +77,7 @@ namespace Traveling_Salesman_CLI
         public void Evolve()
         {
 
-            while (generationsSinceLastMin < 20 && numberOfGenerations < 5000)
+            while (generationsSinceLastMin < maxGensWithNoImprovment && numberOfGenerations < 5000)
             {
                 PairParents();
                 Mutation();
@@ -76,6 +93,12 @@ namespace Traveling_Salesman_CLI
                 for (int i = 0; i < currentBest.Path.Count; i++)
                 {
                     Console.Write($"{currentBest.Path[i]} ");
+                }
+                Console.WriteLine("=============================================================");
+
+                for (int i = 0; i < currentBest.Path.Count; i++)
+                {
+                    Console.Write($"{hardcoded[currentBest.Path[i]].Item1} ");
                 }
                 Console.WriteLine("=============================================================");
                 Console.WriteLine("=============================================================");
@@ -153,7 +176,7 @@ namespace Traveling_Salesman_CLI
 
                     while (!positionFilledInFirstList)
                     {
-                        if (!firstCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex-firstCrossoverIndex).
+                        if (!firstCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex - firstCrossoverIndex).
                             Contains(parent2.Path[indexToCopyFromParent2]))
                         {
                             if (!firstCrossedList.Contains(parent2.Path[indexToCopyFromParent2]))
@@ -186,14 +209,14 @@ namespace Traveling_Salesman_CLI
 
                     while (!positionFilledInSecondList)
                     {
-                        if (!secondCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex-firstCrossoverIndex).Contains(parent1.Path[indexToCopyFromParent1]))
+                        if (!secondCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex - firstCrossoverIndex).Contains(parent1.Path[indexToCopyFromParent1]))
                         {
                             if (!secondCrossedList.Contains(parent1.Path[indexToCopyFromParent1]))
                             {
                                 secondCrossedList[i] = parent1.Path[indexToCopyFromParent1];
                                 positionFilledInSecondList = true;
                             }
-                            
+
                             if (indexToCopyFromParent1 < parent1.Path.Count - 1)
                             {
                                 indexToCopyFromParent1++;
@@ -381,6 +404,19 @@ namespace Traveling_Salesman_CLI
             }
 
             //VisualizeTowns();
+        }
+
+        void GeneratePointsFromList()
+        {
+            for (int i = 0; i < hardcoded.Count; i++)
+            {
+                
+            }
+
+            foreach (Tuple<string, float, float> tuple in hardcoded)
+            {
+                pointsToVisit.Add(new PointF(tuple.Item2, tuple.Item3));
+            }
         }
 
         //void VisualizeTowns()

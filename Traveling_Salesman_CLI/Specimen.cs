@@ -19,9 +19,9 @@ namespace Traveling_Salesman_CLI
         public List<int> Path;
         public double FitnessLevel = 0;
         public bool FitnessLevelSet = false;
-        public List<Point> m_Points;
+        public List<PointF> m_Points;
 
-        public Specimen(int numberOfPoints, List<Point> points, List<int> path)
+        public Specimen(int numberOfPoints, List<PointF> points, List<int> path)
         {
             Path = path;
             m_Points = points;
@@ -46,10 +46,10 @@ namespace Traveling_Salesman_CLI
             }
         }
 
-        double EucDistance(Point firstPoint, Point secondPoint)
+        double EucDistance(PointF firstPoint, PointF secondPoint)
         {
-            int xDiff = firstPoint.X - secondPoint.X;
-            int yDiff = firstPoint.Y - secondPoint.Y;
+            float xDiff = firstPoint.X - secondPoint.X;
+            float yDiff = firstPoint.Y - secondPoint.Y;
             return Math.Sqrt(Math.Pow(xDiff, 2) + Math.Pow(yDiff, 2));
         }
 
