@@ -33,7 +33,7 @@ namespace Traveling_Salesman_CLI
         private bool pointsDrawn;
         private List<Specimen> CurrentGeneration = new List<Specimen>();
         private List<Specimen> NewGeneration = new List<Specimen>();
-        private Specimen currentBest;
+        public Specimen currentBest;
 
         private int generationsSinceLastMin = 0;
 
@@ -46,7 +46,7 @@ namespace Traveling_Salesman_CLI
         //    EvaluateGeneration();
         //}
 
-        private List<Tuple<string, float, float>> hardcoded = new List<Tuple<string, float, float>>()
+        public List<Tuple<string, float, float>> hardcoded = new List<Tuple<string, float, float>>()
         {
             new Tuple<string, float, float>("Aberystwyth", 0.00019f, -0.00028f),
             new Tuple<string, float, float>("Brighton", 383.458f, -0.00060f),
