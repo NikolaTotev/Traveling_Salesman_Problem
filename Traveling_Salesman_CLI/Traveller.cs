@@ -34,7 +34,7 @@ namespace Traveling_Salesman_CLI
         private List<Specimen> CurrentGeneration = new List<Specimen>();
         private List<Specimen> NewGeneration = new List<Specimen>();
         private Specimen currentBest;
-      
+
         private int generationsSinceLastMin = 0;
 
         private int numberOfGenerations = 0;
@@ -68,7 +68,7 @@ namespace Traveling_Salesman_CLI
             numberOfPoints = hardcoded.Count;
             numberOfParents = hardcoded.Count;
             CreateFirstGeneration();
-            currentBest = new Specimen(0, pointsToVisit, null);
+            currentBest = new Specimen(0, pointsToVisit, new List<int>());
             currentBest.FitnessLevelSet = false;
             EvaluateGeneration();
         }
@@ -125,7 +125,7 @@ namespace Traveling_Salesman_CLI
                     OnePointCrossover(parent1, parent1);
                     break;
                 case CrossoverType.twoPoint:
-                    TwoPointCrossover(parent1, parent2);
+                    TwoPointCrossoverSetup(parent1, parent2);
                     break;
                 case CrossoverType.partialMap:
                     PartialMapCrossover(parent1, parent2);
@@ -144,102 +144,35 @@ namespace Traveling_Salesman_CLI
             return null;
         }
 
-        private void TwoPointCrossover(Specimen parent1, Specimen parent2)
+        private void TwoPointCrossoverSetup(Specimen parent1, Specimen parent2)
         {
-            List<int> firstCrossedList = Enumerable.Repeat(-1, parent1.Path.Count).ToList();
-            List<int> secondCrossedList = Enumerable.Repeat(-1, parent2.Path.Count).ToList();
+
             Random rand = new Random();
 
-            int midpoint = parent1.Path.Count / 2;
-
-
-            int firstCrossoverIndex = rand.Next(midpoint - midpoint / 2, midpoint);
-            int secondCrossoverIndex = rand.Next(midpoint + 1, midpoint + midpoint / 2);
-
-            int indexToCopyFromParent1 = 0;
-            int indexToCopyFromParent2 = 0;
-
-            for (int i = firstCrossoverIndex; i <= secondCrossoverIndex; i++)
+            int randSelection1 = rand.Next(0, parent1.Path.Count);
+            int randSelection2 = rand.Next(0, parent1.Path.Count);
+            while (randSelection1 == randSelection2 || randSelection1 == 0 || randSelection2 == 0 || randSelection1 == parent1.Path.Count - 1 || randSelection2 == parent1.Path.Count - 1)
             {
-                firstCrossedList[i] = parent1.Path[i];
-                secondCrossedList[i] = parent2.Path[i];
+                randSelection1 = rand.Next(0, parent1.Path.Count);
+                randSelection2 = rand.Next(0, parent1.Path.Count);
             }
 
-            //Console.WriteLine($"Cross over indexes: {firstCrossoverIndex} - {secondCrossoverIndex}");
+            int firstCrossoverIndex = 0;
+            int secondCrossoverIndex = 0;
 
-            for (int i = 0; i < firstCrossedList.Count; i++)
+            if (randSelection1 < randSelection2)
             {
-                if (i < firstCrossoverIndex || i > secondCrossoverIndex)
-                {
-                    bool positionFilledInFirstList = false;
-                    bool positionFilledInSecondList = false;
-
-                    while (!positionFilledInFirstList)
-                    {
-                        if (!firstCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex - firstCrossoverIndex).
-                            Contains(parent2.Path[indexToCopyFromParent2]))
-                        {
-                            if (!firstCrossedList.Contains(parent2.Path[indexToCopyFromParent2]))
-                            {
-                                firstCrossedList[i] = parent2.Path[indexToCopyFromParent2];
-                                positionFilledInFirstList = true;
-                            }
-
-                            if (indexToCopyFromParent2 < parent2.Path.Count - 1)
-                            {
-                                indexToCopyFromParent2++;
-                            }
-                            else
-                            {
-                                indexToCopyFromParent2 = 0;
-                            }
-                        }
-                        else
-                        {
-                            if (indexToCopyFromParent2 < parent2.Path.Count - 1)
-                            {
-                                indexToCopyFromParent2++;
-                            }
-                            else
-                            {
-                                indexToCopyFromParent2 = 0;
-                            }
-                        }
-                    }
-
-                    while (!positionFilledInSecondList)
-                    {
-                        if (!secondCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex - firstCrossoverIndex).Contains(parent1.Path[indexToCopyFromParent1]))
-                        {
-                            if (!secondCrossedList.Contains(parent1.Path[indexToCopyFromParent1]))
-                            {
-                                secondCrossedList[i] = parent1.Path[indexToCopyFromParent1];
-                                positionFilledInSecondList = true;
-                            }
-
-                            if (indexToCopyFromParent1 < parent1.Path.Count - 1)
-                            {
-                                indexToCopyFromParent1++;
-                            }
-                            else
-                            {
-                                indexToCopyFromParent1 = 0;
-                            }
-                        }
-                        else
-                        {
-                            if (indexToCopyFromParent1 < parent1.Path.Count - 1)
-                            {
-                                indexToCopyFromParent1++;
-                            }
-                            else
-                            {
-                                indexToCopyFromParent1 = 0;
-                            }
-                        }
-                    }
-                }
+                firstCrossoverIndex = randSelection1;
+                secondCrossoverIndex = randSelection2;
             }
+            else
+            {
+                firstCrossoverIndex = randSelection2;
+                secondCrossoverIndex = randSelection1;
+            }
+
+            List<int> firstCrossedList = TwoPointCross(firstCrossoverIndex, secondCrossoverIndex, parent1.Path, parent2.Path);
+            List<int> secondCrossedList= TwoPointCross(firstCrossoverIndex, secondCrossoverIndex, parent2.Path, parent1.Path);
 
             //for (int i = 0; i < firstCrossedList.Count; i++)
             //{
@@ -255,6 +188,105 @@ namespace Traveling_Salesman_CLI
             Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList);
             NewGeneration.Add(firstChild);
             NewGeneration.Add(secondChild);
+        }
+
+        private List<int> TwoPointCross(int firstCrossoverIndex, int secondCrossoverIndex, List<int> parent1, List<int> parent2)
+        {
+            int stationarySectionLength = secondCrossoverIndex - firstCrossoverIndex;
+            //for (int i = firstCrossoverIndex; i <= stationarySectionLength; i++)
+            //{
+            //    firstCrossedList[i] = parent1[i];
+            //    secondCrossedList[i] = parent2[i];
+            //}
+
+            List<int> crossedList = new List<int>();
+            //Console.WriteLine($"Cross over indexes: {firstCrossoverIndex} - {secondCrossoverIndex}");
+
+
+
+            foreach (int element in parent1)
+            {
+                crossedList.Add(element);
+            }
+
+
+
+            List<int> placedNumbers = new List<int>();
+            List<int> stationarySection = parent1.GetRange(firstCrossoverIndex, stationarySectionLength + 1);
+
+            int copyFromIndex;
+            int copyToIndex;
+            if (secondCrossoverIndex < parent2.Count - 1)
+            {
+                copyFromIndex = secondCrossoverIndex + 1;
+                copyToIndex = secondCrossoverIndex + 1;
+            }
+            else
+            {
+                copyFromIndex = 0;
+                copyToIndex = 0;
+            }
+
+
+            for (int i = 0; i < parent1.Count; i++)
+            {
+                bool isInStationarySection = copyToIndex >= firstCrossoverIndex && copyToIndex <= secondCrossoverIndex;
+
+                //Console.WriteLine($"Moving to next");
+                if (!isInStationarySection)
+                {
+                    bool positionFilled = false;
+                    while (!positionFilled)
+                    {
+                        int numberToPlace = parent2[copyFromIndex];
+                        //Console.WriteLine();
+                        //Console.WriteLine($"Trying to place {numberToPlace} from {copyFromIndex} to {copyToIndex}");
+                        if (!placedNumbers.Contains(numberToPlace) && !stationarySection.Contains(numberToPlace))
+                        {
+                            //Console.WriteLine($"I managed to place {numberToPlace} from {copyFromIndex} into {copyToIndex}");
+                            crossedList[copyToIndex] = parent2[copyFromIndex];
+                            placedNumbers.Add(numberToPlace);
+                            positionFilled = true;
+
+                            if (copyToIndex < parent1.Count - 1)
+                            {
+                                copyToIndex++;
+                            }
+                            else
+                            {
+                                copyToIndex = 0;
+                            }
+                        }
+                        else
+                        {
+                            //Console.WriteLine($"But I failed because {placedNumbers.Contains(numberToPlace)} or {stationarySection.Contains(numberToPlace)}");
+                            if (copyFromIndex < parent2.Count - 1)
+                            {
+                                copyFromIndex++;
+                            }
+                            else
+                            {
+                                copyFromIndex = 0;
+                            }
+                        }
+
+                    }
+
+                }
+                else
+                {
+                    if (copyToIndex < parent1.Count - 1)
+                    {
+                        copyToIndex++;
+                    }
+                    else
+                    {
+                        copyToIndex = 0;
+                    }
+                }
+            }
+
+            return crossedList;
         }
 
         private Specimen PartialMapCrossover(Specimen parent1, Specimen parent2)
@@ -410,7 +442,7 @@ namespace Traveling_Salesman_CLI
         {
             for (int i = 0; i < hardcoded.Count; i++)
             {
-                
+
             }
 
             foreach (Tuple<string, float, float> tuple in hardcoded)

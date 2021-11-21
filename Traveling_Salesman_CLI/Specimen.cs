@@ -23,7 +23,13 @@ namespace Traveling_Salesman_CLI
 
         public Specimen(int numberOfPoints, List<PointF> points, List<int> path)
         {
-            Path = path;
+            Path = new List<int>();
+            foreach (var i in path)
+            {
+                Path.Add(i);
+            }
+
+
             m_Points = points;
         }
         // Start is called before the first frame update

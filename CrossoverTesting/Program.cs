@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 
 namespace CrossoverTesting
 {
@@ -19,11 +20,22 @@ namespace CrossoverTesting
         {
             List<Specimen> CurrentGeneration = new List<Specimen>();
             List<int> firstPointList = new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-            List<int> secondPointList = new List<int>() { 1, 9, 5, 2, 3, 6, 4, 8, 10, 7 };
+            //List<int> secondPointList = new List<int>() { 1, 9, 5, 2, 3, 6, 4, 8, 10, 7 };
+            List<int> secondPointList = new List<int>() { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
 
             int numberOfPoints = 100;
             int numberOfParents = 100;
-            Crossover(CrossoverType.twoPoint, firstPointList, secondPointList);
+
+            while (true)
+            {
+                Crossover(CrossoverType.twoPoint, firstPointList, secondPointList);
+                Console.WriteLine();
+                Console.WriteLine("===================================================");
+                Console.WriteLine();
+
+                Thread.Sleep(1000);
+            }
+
         }
 
         static void Crossover(CrossoverType crossover, List<int> parent1, List<int> parent2)
@@ -68,80 +80,50 @@ namespace CrossoverTesting
 
         private static void TwoPointCrossover(List<int> parent1, List<int> parent2)
         {
-            List<int> firstCrossedList = Enumerable.Repeat(-1, parent1.Count).ToList();
-            List<int> secondCrossedList = Enumerable.Repeat(-1, parent2.Count).ToList();
+            List<int> firstCrossedList = new List<int>();
+            List<int> secondCrossedList = new List<int>();
             Random rand = new Random();
 
             int midpoint = parent1.Count / 2;
 
 
-            int firstCrossoverIndex = rand.Next(midpoint - midpoint / 2, midpoint);
-            int secondCrossoverIndex = rand.Next(midpoint + 1, midpoint + midpoint / 2);
+            //int firstCrossoverIndex = rand.Next(midpoint - midpoint / 2, midpoint);
+            //int secondCrossoverIndex = rand.Next(midpoint + 1, midpoint + midpoint / 2);
 
-            int indexToCopyFromParent1 = 0;
-            int indexToCopyFromParent2 = 0;
+            //int indexToCopyFromParent1 = 0;
+            //int indexToCopyFromParent2 = 0;
 
-            for (int i = firstCrossoverIndex; i <= secondCrossoverIndex; i++)
+            //for (int i = firstCrossoverIndex; i <= secondCrossoverIndex; i++)
+            //{
+            //    firstCrossedList[i] = parent1[i];
+            //    secondCrossedList[i] = parent2[i];
+            //}
+            int randSelection1 = rand.Next(0, parent1.Count);
+            int randSelection2 = rand.Next(0, parent1.Count);
+            while (randSelection1 == randSelection2 || randSelection1 == 0 || randSelection2 == 0 || randSelection1 == parent1.Count - 1 || randSelection2 == parent1.Count - 1)
             {
-                firstCrossedList[i] = parent1[i];
-                secondCrossedList[i] = parent2[i];
+                randSelection1 = rand.Next(0, parent1.Count);
+                randSelection2 = rand.Next(0, parent1.Count);
             }
 
-            Console.WriteLine($"Cross over indexes: {firstCrossoverIndex} - {secondCrossoverIndex}");
+            int firstCrossoverIndex = 0;
+            int secondCrossoverIndex = 0;
 
-            for (int i = 0; i < firstCrossedList.Count; i++)
+            if (randSelection1 < randSelection2)
             {
-                if (i < firstCrossoverIndex || i > secondCrossoverIndex)
-                {
-                    bool positionFilledInFirstList = false;
-                    bool positionFilledInSecondList = false;
-
-                    while (!positionFilledInFirstList)
-                    {
-                        if (!firstCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex).Contains(parent2[indexToCopyFromParent2]))
-                        {
-                            firstCrossedList[i] = parent2[indexToCopyFromParent2];
-                            positionFilledInFirstList = true;
-                            indexToCopyFromParent2++;
-                        }
-                        else
-                        {
-                            if (indexToCopyFromParent2 < parent2.Count - 1)
-                            {
-                                indexToCopyFromParent2++;
-                            }
-                            else
-                            {
-                                indexToCopyFromParent2 = 0;
-                            }
-
-                        }
-
-                    }
-
-                    while (!positionFilledInSecondList)
-                    {
-                        if (!secondCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex).Contains(parent1[indexToCopyFromParent1]))
-                        {
-                            secondCrossedList[i] = parent1[indexToCopyFromParent1];
-                            positionFilledInSecondList = true;
-                            indexToCopyFromParent1++;
-                        }
-                        else
-                        {
-                            if (indexToCopyFromParent1 < parent1.Count - 1)
-                            {
-                                indexToCopyFromParent1++;
-                            }
-                            else
-                            {
-                                indexToCopyFromParent1 = 0;
-                            }
-                        }
-
-                    }
-                }
+                firstCrossoverIndex = randSelection1;
+                secondCrossoverIndex = randSelection2;
             }
+            else
+            {
+                firstCrossoverIndex = randSelection2;
+                secondCrossoverIndex = randSelection1;
+            }
+
+
+            firstCrossedList = TwoPointCross(firstCrossoverIndex, secondCrossoverIndex, parent1, parent2);
+            secondCrossedList = TwoPointCross(firstCrossoverIndex, secondCrossoverIndex, parent2, parent1);
+
 
             for (int i = 0; i < firstCrossedList.Count; i++)
             {
@@ -154,6 +136,105 @@ namespace CrossoverTesting
             }
         }
 
+
+        private static List<int> TwoPointCross(int firstCrossoverIndex, int secondCrossoverIndex, List<int> parent1, List<int> parent2)
+        {
+            int stationarySectionLength = secondCrossoverIndex - firstCrossoverIndex;
+            //for (int i = firstCrossoverIndex; i <= stationarySectionLength; i++)
+            //{
+            //    firstCrossedList[i] = parent1[i];
+            //    secondCrossedList[i] = parent2[i];
+            //}
+
+            List<int> crossedList = new List<int>();
+            Console.WriteLine($"Cross over indexes: {firstCrossoverIndex} - {secondCrossoverIndex}");
+
+
+
+            foreach (int element in parent1)
+            {
+                crossedList.Add(element);
+            }
+
+
+
+            List<int> placedNumbers = new List<int>();
+            List<int> stationarySection = parent1.GetRange(firstCrossoverIndex, stationarySectionLength + 1);
+
+            int copyFromIndex;
+            int copyToIndex;
+            if (secondCrossoverIndex < parent2.Count - 1)
+            {
+                copyFromIndex = secondCrossoverIndex + 1;
+                copyToIndex = secondCrossoverIndex + 1;
+            }
+            else
+            {
+                copyFromIndex = 0;
+                copyToIndex = 0;
+            }
+
+
+            for (int i = 0; i < parent1.Count; i++)
+            {
+                bool isInStationarySection = copyToIndex >= firstCrossoverIndex && copyToIndex <= secondCrossoverIndex;
+
+                //Console.WriteLine($"Moving to next");
+                if (!isInStationarySection)
+                {
+                    bool positionFilled = false;
+                    while (!positionFilled)
+                    {
+                        int numberToPlace = parent2[copyFromIndex];
+                        //Console.WriteLine();
+                        //Console.WriteLine($"Trying to place {numberToPlace} from {copyFromIndex} to {copyToIndex}");
+                        if (!placedNumbers.Contains(numberToPlace) && !stationarySection.Contains(numberToPlace))
+                        {
+                            //Console.WriteLine($"I managed to place {numberToPlace} from {copyFromIndex} into {copyToIndex}");
+                            crossedList[copyToIndex] = parent2[copyFromIndex];
+                            placedNumbers.Add(numberToPlace);
+                            positionFilled = true;
+
+                            if (copyToIndex < parent1.Count - 1)
+                            {
+                                copyToIndex++;
+                            }
+                            else
+                            {
+                                copyToIndex = 0;
+                            }
+                        }
+                        else
+                        {
+                            //Console.WriteLine($"But I failed because {placedNumbers.Contains(numberToPlace)} or {stationarySection.Contains(numberToPlace)}");
+                            if (copyFromIndex < parent2.Count - 1)
+                            {
+                                copyFromIndex++;
+                            }
+                            else
+                            {
+                                copyFromIndex = 0;
+                            }
+                        }
+
+                    }
+
+                }
+                else
+                {
+                    if (copyToIndex < parent1.Count - 1)
+                    {
+                        copyToIndex++;
+                    }
+                    else
+                    {
+                        copyToIndex = 0;
+                    }
+                }
+            }
+
+            return crossedList;
+        }
         private static Specimen PartialMapCrossover(List<int> parent1, List<int> parent2)
         {
             return null;
