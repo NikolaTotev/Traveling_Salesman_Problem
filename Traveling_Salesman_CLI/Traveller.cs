@@ -21,20 +21,19 @@ namespace Traveling_Salesman_CLI
 
     class Traveller
     {
-        private List<Point> pointsToVisit = new List<Point>();
+        private List<PointF> pointsToVisit = new List<PointF>();
 
         public int numberOfPoints = 20;
-        public int numberOfParents = 20;
-    
+        public int numberOfParents = 60;
+        public int maxGensWithNoImprovment = 24;
+        public int topNToSave = 1;
 
         public CrossoverType currentCrossoverType = CrossoverType.twoPoint;
         //public GameObject TownGameObject;
         private bool pointsDrawn;
         private List<Specimen> CurrentGeneration = new List<Specimen>();
         private List<Specimen> NewGeneration = new List<Specimen>();
-        private Specimen currentBest;
-        Tuple<int, int> firstPair = new Tuple<int, int>(0, 0);
-        Tuple<int, int> secondPair = new Tuple<int, int>(0, 0);
+        public Specimen currentBest;
 
         private int generationsSinceLastMin = 0;
 
@@ -47,11 +46,28 @@ namespace Traveling_Salesman_CLI
         //    EvaluateGeneration();
         //}
 
+        public List<Tuple<string, float, float>> hardcoded = new List<Tuple<string, float, float>>()
+        {
+            new Tuple<string, float, float>("Aberystwyth", 0.00019f, -0.00028f),
+            new Tuple<string, float, float>("Brighton", 383.458f, -0.00060f),
+            new Tuple<string, float, float>("Edinburgh", -27.0206f, -282.758f),
+            new Tuple<string, float, float>("Exeter", 335.751f, -269.577f),
+            new Tuple<string, float, float>("Glasgow", 69.4331f, -246.78f),
+            new Tuple<string, float, float>("Inverness", 168.521f, 31.4012f),
+            new Tuple<string, float, float>("Liverpool", 320.35f, -160.9f),
+            new Tuple<string, float, float>("London", 179.933f, -318.031f),
+            new Tuple<string, float, float>("Newcastle", 492.671f, -131.563f),
+            new Tuple<string, float, float>("Nottingham", 112.198f, -110.561f),
+            new Tuple<string, float, float>("Oxford", 306.32f, -108.09f),
+            new Tuple<string, float, float>("Stratford", 217.343f, -447.089f)
+        };
+
         public Traveller()
         {
-            GeneratePoints();
+            GeneratePointsFromList();
+            numberOfPoints = hardcoded.Count;
             CreateFirstGeneration();
-            currentBest = new Specimen(0, pointsToVisit, null);
+            currentBest = new Specimen(0, pointsToVisit, new List<int>(), numberOfParents);
             currentBest.FitnessLevelSet = false;
             EvaluateGeneration();
         }
@@ -60,12 +76,11 @@ namespace Traveling_Salesman_CLI
         public void Evolve()
         {
 
-            while (generationsSinceLastMin < 20 && numberOfGenerations < 5000)
+            while (generationsSinceLastMin < maxGensWithNoImprovment && numberOfGenerations < 5000)
             {
                 PairParents();
                 Mutation();
                 EvaluateGeneration();
-                VisualizeRoute(currentBest);
                 generationsSinceLastMin++;
                 numberOfGenerations++;
 
@@ -78,6 +93,12 @@ namespace Traveling_Salesman_CLI
                     Console.Write($"{currentBest.Path[i]} ");
                 }
                 Console.WriteLine("=============================================================");
+
+                for (int i = 0; i < currentBest.Path.Count; i++)
+                {
+                    Console.Write($"{hardcoded[currentBest.Path[i]].Item1} ");
+                }
+                Console.WriteLine("=============================================================");
                 Console.WriteLine("=============================================================");
                 //Thread.Sleep(100);
             }
@@ -87,7 +108,7 @@ namespace Traveling_Salesman_CLI
         {
             for (int i = 0; i < numberOfParents; i++)
             {
-                Specimen newSpecimen = new Specimen(numberOfPoints, pointsToVisit, Enumerable.Range(0, numberOfParents).ToList());
+                Specimen newSpecimen = new Specimen(numberOfPoints, pointsToVisit, Enumerable.Range(0, hardcoded.Count).ToList(), numberOfParents);
                 newSpecimen.InitializationRandomSwap();
                 CurrentGeneration.Add(newSpecimen);
             }
@@ -102,7 +123,7 @@ namespace Traveling_Salesman_CLI
                     OnePointCrossover(parent1, parent1);
                     break;
                 case CrossoverType.twoPoint:
-                    TwoPointCrossover(parent1, parent2);
+                    TwoPointCrossoverSetup(parent1, parent2);
                     break;
                 case CrossoverType.partialMap:
                     PartialMapCrossover(parent1, parent2);
@@ -121,117 +142,143 @@ namespace Traveling_Salesman_CLI
             return null;
         }
 
-        private void TwoPointCrossover(Specimen parent1, Specimen parent2)
+        private void TwoPointCrossoverSetup(Specimen parent1, Specimen parent2)
         {
-            List<int> firstCrossedList = Enumerable.Repeat(-1, parent1.Path.Count).ToList();
-            List<int> secondCrossedList = Enumerable.Repeat(-1, parent2.Path.Count).ToList();
+
             Random rand = new Random();
 
-            int midpoint = parent1.Path.Count / 2;
-
-
-            int firstCrossoverIndex = rand.Next(midpoint - midpoint / 2, midpoint);
-            int secondCrossoverIndex = rand.Next(midpoint + 1, midpoint + midpoint / 2);
-
-            int indexToCopyFromParent1 = 0;
-            int indexToCopyFromParent2 = 0;
-
-            for (int i = firstCrossoverIndex; i <= secondCrossoverIndex; i++)
+            int randSelection1 = rand.Next(0, parent1.Path.Count);
+            int randSelection2 = rand.Next(0, parent1.Path.Count);
+            while (randSelection1 == randSelection2 || randSelection1 == 0 || randSelection2 == 0 || randSelection1 == parent1.Path.Count - 1 || randSelection2 == parent1.Path.Count - 1)
             {
-                firstCrossedList[i] = parent1.Path[i];
-                secondCrossedList[i] = parent2.Path[i];
+                randSelection1 = rand.Next(0, parent1.Path.Count);
+                randSelection2 = rand.Next(0, parent1.Path.Count);
             }
 
-            //Console.WriteLine($"Cross over indexes: {firstCrossoverIndex} - {secondCrossoverIndex}");
+            int firstCrossoverIndex = 0;
+            int secondCrossoverIndex = 0;
 
-            for (int i = 0; i < firstCrossedList.Count; i++)
+            if (randSelection1 < randSelection2)
             {
-                if (i < firstCrossoverIndex || i > secondCrossoverIndex)
+                firstCrossoverIndex = randSelection1;
+                secondCrossoverIndex = randSelection2;
+            }
+            else
+            {
+                firstCrossoverIndex = randSelection2;
+                secondCrossoverIndex = randSelection1;
+            }
+
+            List<int> firstCrossedList = TwoPointCross(firstCrossoverIndex, secondCrossoverIndex, parent1.Path, parent2.Path);
+            List<int> secondCrossedList = TwoPointCross(firstCrossoverIndex, secondCrossoverIndex, parent2.Path, parent1.Path);
+
+            Specimen firstChild = new Specimen(numberOfPoints, pointsToVisit, firstCrossedList, numberOfParents);
+            Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList, numberOfParents);
+
+            int mutationRandom = rand.Next(4242, 424242);
+
+            if (mutationRandom % 42 == 0)
+            {
+                firstChild.InitializationRandomSwap();
+            }
+
+            if (mutationRandom % 10 == 0)
+            {
+                firstChild.ReverseMutation(firstCrossoverIndex, secondCrossoverIndex);
+                secondChild.ReverseMutation(firstCrossoverIndex, secondCrossoverIndex);
+            }
+
+            if (mutationRandom % 50 == 0)
+            {
+                secondChild.SwapMutation(firstCrossoverIndex, secondCrossoverIndex);
+            }
+            NewGeneration.Add(firstChild);
+            NewGeneration.Add(secondChild);
+        }
+
+        private List<int> TwoPointCross(int firstCrossoverIndex, int secondCrossoverIndex, List<int> parent1, List<int> parent2)
+        {
+            int stationarySectionLength = secondCrossoverIndex - firstCrossoverIndex;
+
+            List<int> crossedList = new List<int>();
+
+            foreach (int element in parent1)
+            {
+                crossedList.Add(element);
+            }
+
+            List<int> placedNumbers = new List<int>();
+            List<int> stationarySection = parent1.GetRange(firstCrossoverIndex, stationarySectionLength + 1);
+
+            int copyFromIndex;
+            int copyToIndex;
+            if (secondCrossoverIndex < parent2.Count - 1)
+            {
+                copyFromIndex = secondCrossoverIndex + 1;
+                copyToIndex = secondCrossoverIndex + 1;
+            }
+            else
+            {
+                copyFromIndex = 0;
+                copyToIndex = 0;
+            }
+
+
+            for (int i = 0; i < parent1.Count; i++)
+            {
+                bool isInStationarySection = copyToIndex >= firstCrossoverIndex && copyToIndex <= secondCrossoverIndex;
+
+                if (!isInStationarySection)
                 {
-                    bool positionFilledInFirstList = false;
-                    bool positionFilledInSecondList = false;
-
-                    while (!positionFilledInFirstList)
+                    bool positionFilled = false;
+                    while (!positionFilled)
                     {
-                        if (!firstCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex-firstCrossoverIndex).
-                            Contains(parent2.Path[indexToCopyFromParent2]))
-                        {
-                            if (!firstCrossedList.Contains(parent2.Path[indexToCopyFromParent2]))
-                            {
-                                firstCrossedList[i] = parent2.Path[indexToCopyFromParent2];
-                                positionFilledInFirstList = true;
-                            }
+                        int numberToPlace = parent2[copyFromIndex];
 
-                            if (indexToCopyFromParent2 < parent2.Path.Count - 1)
+                        if (!placedNumbers.Contains(numberToPlace) && !stationarySection.Contains(numberToPlace))
+                        {
+                            crossedList[copyToIndex] = parent2[copyFromIndex];
+                            placedNumbers.Add(numberToPlace);
+                            positionFilled = true;
+
+                            if (copyToIndex < parent1.Count - 1)
                             {
-                                indexToCopyFromParent2++;
+                                copyToIndex++;
                             }
                             else
                             {
-                                indexToCopyFromParent2 = 0;
+                                copyToIndex = 0;
                             }
                         }
                         else
                         {
-                            if (indexToCopyFromParent2 < parent2.Path.Count - 1)
+                            if (copyFromIndex < parent2.Count - 1)
                             {
-                                indexToCopyFromParent2++;
+                                copyFromIndex++;
                             }
                             else
                             {
-                                indexToCopyFromParent2 = 0;
+                                copyFromIndex = 0;
                             }
                         }
+
                     }
 
-                    while (!positionFilledInSecondList)
+                }
+                else
+                {
+                    if (copyToIndex < parent1.Count - 1)
                     {
-                        if (!secondCrossedList.GetRange(firstCrossoverIndex, secondCrossoverIndex-firstCrossoverIndex).Contains(parent1.Path[indexToCopyFromParent1]))
-                        {
-                            if (!secondCrossedList.Contains(parent1.Path[indexToCopyFromParent1]))
-                            {
-                                secondCrossedList[i] = parent1.Path[indexToCopyFromParent1];
-                                positionFilledInSecondList = true;
-                            }
-                            
-                            if (indexToCopyFromParent1 < parent1.Path.Count - 1)
-                            {
-                                indexToCopyFromParent1++;
-                            }
-                            else
-                            {
-                                indexToCopyFromParent1 = 0;
-                            }
-                        }
-                        else
-                        {
-                            if (indexToCopyFromParent1 < parent1.Path.Count - 1)
-                            {
-                                indexToCopyFromParent1++;
-                            }
-                            else
-                            {
-                                indexToCopyFromParent1 = 0;
-                            }
-                        }
+                        copyToIndex++;
+                    }
+                    else
+                    {
+                        copyToIndex = 0;
                     }
                 }
             }
 
-            //for (int i = 0; i < firstCrossedList.Count; i++)
-            //{
-            //    Console.Write($"{firstCrossedList[i]} ");
-            //}
-            //Console.WriteLine();
-            //for (int i = 0; i < secondCrossedList.Count; i++)
-            //{
-            //    Console.Write($"{secondCrossedList[i]} ");
-            //}
-
-            Specimen firstChild = new Specimen(numberOfPoints, pointsToVisit, firstCrossedList);
-            Specimen secondChild = new Specimen(numberOfPoints, pointsToVisit, secondCrossedList);
-            NewGeneration.Add(firstChild);
-            NewGeneration.Add(secondChild);
+            return crossedList;
         }
 
         private Specimen PartialMapCrossover(Specimen parent1, Specimen parent2)
@@ -254,14 +301,14 @@ namespace Traveling_Salesman_CLI
             CurrentGeneration = (from specimen in CurrentGeneration orderby specimen.FitnessLevel select specimen).ToList();
             if (!currentBest.FitnessLevelSet)
             {
-                currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path);
+                currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path, numberOfParents);
                 currentBest.FitnessLevelSet = true;
                 currentBest.FitnessLevel = CurrentGeneration[0].FitnessLevel;
             }
 
             if (CurrentGeneration[0].FitnessLevel < currentBest.FitnessLevel)
             {
-                currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path);
+                currentBest = new Specimen(numberOfPoints, pointsToVisit, CurrentGeneration[0].Path, numberOfParents);
                 currentBest.FitnessLevelSet = true;
                 currentBest.FitnessLevel = CurrentGeneration[0].FitnessLevel;
                 generationsSinceLastMin = 0;
@@ -276,19 +323,18 @@ namespace Traveling_Salesman_CLI
         void PairParents()
         {
             //Transfer top 3 over to new generation, remaining numberOfParents-3 is considered the "new generation"
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < topNToSave; i++)
             {
-                NewGeneration.Add(CurrentGeneration[i]);
+                NewGeneration.Add(new Specimen(numberOfPoints, CurrentGeneration[i].m_Points, CurrentGeneration[i].Path, numberOfParents));
             }
 
             ValueTuple<int, int, int> requiredChildrenCounts;
 
-            int remainingFreeSpace = numberOfParents - 3;
+            int remainingFreeSpace = numberOfParents - topNToSave;
 
             //ToDo this needs to be verified that it sums up to the correct final value after the new generation is created.
-            int fiftyPercent = 50 / 100;
-            requiredChildrenCounts.Item1 = (int)(remainingFreeSpace * (50f / 100f));
-            requiredChildrenCounts.Item2 = (int)(remainingFreeSpace * (20f / 100f));
+            requiredChildrenCounts.Item1 = (int)(remainingFreeSpace * (65f / 100f));
+            requiredChildrenCounts.Item2 = (int)(remainingFreeSpace * (5f / 100f));
             requiredChildrenCounts.Item3 = (int)(remainingFreeSpace * (30f / 100f));
 
             int estimatedRequiredChildren = requiredChildrenCounts.Item1 + requiredChildrenCounts.Item2 +
@@ -304,8 +350,8 @@ namespace Traveling_Salesman_CLI
             Reproduce(requiredChildrenCounts.Item1, firstParentSelectionRange, secondParentSelectionRange);
 
             //Top 0-20% with bottom 0-20% (80-90%); -> 20% of the new generation
-            firstParentSelectionRange = PercentToIndex(0, 20);
-            secondParentSelectionRange = PercentToIndex(80, 100);
+            firstParentSelectionRange = PercentToIndex(0, 10);
+            secondParentSelectionRange = PercentToIndex(60, 100);
 
             Reproduce(requiredChildrenCounts.Item2, firstParentSelectionRange, secondParentSelectionRange);
 
@@ -317,7 +363,7 @@ namespace Traveling_Salesman_CLI
             CurrentGeneration.Clear();
             foreach (var specimen in NewGeneration)
             {
-                CurrentGeneration.Add(new Specimen(numberOfParents, specimen.m_Points, specimen.Path));
+                CurrentGeneration.Add(new Specimen(numberOfParents, specimen.m_Points, specimen.Path, numberOfParents));
             }
         }
 
@@ -383,18 +429,13 @@ namespace Traveling_Salesman_CLI
             //VisualizeTowns();
         }
 
-        //void VisualizeTowns()
-        //{
-        //    foreach (Vector3Int vector3Int in pointsToVisit)
-        //    {
-        //        GameObject town = Instantiate(TownGameObject, vector3Int, Quaternion.identity);
-        //    }
-        //}
-
-
-        void VisualizeRoute(Specimen specimen)
+        void GeneratePointsFromList()
         {
-
+            foreach (Tuple<string, float, float> tuple in hardcoded)
+            {
+                pointsToVisit.Add(new PointF(tuple.Item2, tuple.Item3));
+            }
         }
+
     }
 }

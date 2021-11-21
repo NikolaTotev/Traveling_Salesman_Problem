@@ -19,11 +19,19 @@ namespace Traveling_Salesman_CLI
         public List<int> Path;
         public double FitnessLevel = 0;
         public bool FitnessLevelSet = false;
-        public List<Point> m_Points;
+        public List<PointF> m_Points;
+        private int m_popSize;
 
-        public Specimen(int numberOfPoints, List<Point> points, List<int> path)
+        public Specimen(int numberOfPoints, List<PointF> points, List<int> path, int popSize)
         {
-            Path = path;
+            Path = new List<int>();
+            foreach (var i in path)
+            {
+                Path.Add(i);
+            }
+
+            m_popSize = popSize;
+
             m_Points = points;
         }
         // Start is called before the first frame update
@@ -40,16 +48,16 @@ namespace Traveling_Salesman_CLI
 
         public void FitnessFunction()
         {
-            for (int i = 0; i < m_Points.Count-1; i++)
+            for (int i = 0; i < Path.Count - 1; i++)
             {
-                FitnessLevel += EucDistance(m_Points[Path[i]], m_Points[Path[i+1]]);
+                FitnessLevel += EucDistance(m_Points[Path[i]], m_Points[Path[i + 1]]);
             }
         }
 
-        double EucDistance(Point firstPoint, Point secondPoint)
+        double EucDistance(PointF firstPoint, PointF secondPoint)
         {
-            int xDiff = firstPoint.X - secondPoint.X;
-            int yDiff = firstPoint.Y - secondPoint.Y;
+            float xDiff = firstPoint.X - secondPoint.X;
+            float yDiff = firstPoint.Y - secondPoint.Y;
             return Math.Sqrt(Math.Pow(xDiff, 2) + Math.Pow(yDiff, 2));
         }
 
@@ -68,7 +76,7 @@ namespace Traveling_Salesman_CLI
             }
         }
 
-        void SwapMutation(int index1, int index2)
+        public void SwapMutation(int index1, int index2)
         {
             (Path[index1], Path[index2]) = (Path[index2], Path[index1]);
         }
@@ -78,8 +86,16 @@ namespace Traveling_Salesman_CLI
             Path.Insert(index, value);
         }
 
-        void ReverseMutation()
+        public void ReverseMutation(int firstIndex, int secondIndex)
         {
+            List<int> revPart = Path.GetRange(firstIndex, secondIndex - firstIndex);
+            revPart.Reverse();
+            int counter = 0;
+            for (int i = firstIndex; i < firstIndex+(secondIndex-firstIndex); i++)
+            {
+                Path[i] = revPart[counter];
+                counter++;
+            }
 
         }
 
